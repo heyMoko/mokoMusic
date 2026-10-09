@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -39,6 +41,7 @@ class MainActivity : ComponentActivity() {
                     uiState = uiState,
                     onTogglePlayback = playbackViewModel::togglePlayback,
                     onSeek = playbackViewModel::seekTo,
+                    onSelectTrack = playbackViewModel::selectTrack,
                 )
             }
         }
@@ -50,6 +53,7 @@ private fun PlaybackScreen(
     uiState: PlaybackUiState,
     onTogglePlayback: () -> Unit,
     onSeek: (Long) -> Unit,
+    onSelectTrack: (Int) -> Unit,
 ) {
     val duration = uiState.durationMs.toFloat().coerceAtLeast(1f)
 
@@ -64,6 +68,28 @@ private fun PlaybackScreen(
         Text(text = uiState.title, style = MaterialTheme.typography.titleLarge)
         Text(text = uiState.artist, style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(24.dp))
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            itemsIndexed(uiState.tracks) { index, track ->
+                Button(
+                    onClick = { onSelectTrack(index) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = if (index == uiState.currentMediaItemIndex) {
+                            "재생 중 · ${track.title}"
+                        } else {
+                            track.title
+                        },
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         Slider(
             value = uiState.positionMs.toFloat().coerceIn(0f, duration),
             onValueChange = { onSeek(it.toLong()) },

@@ -10,6 +10,8 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.mokostudio.mokomusic.MainActivity
+import com.mokostudio.mokomusic.data.SampleTrackRepository
+import com.mokostudio.mokomusic.data.toMediaItem
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.PI
@@ -27,7 +29,7 @@ class PlaybackService : MediaSessionService() {
             )
             .build()
             .apply {
-                setMediaItem(sampleMediaItem())
+                setMediaItems(SampleTrackRepository.tracks.map { it.toMediaItem() })
                 prepare()
                 playWhenReady = false
             }
@@ -60,17 +62,6 @@ class PlaybackService : MediaSessionService() {
         mediaSession = null
         super.onDestroy()
     }
-
-    private fun sampleMediaItem(): MediaItem = MediaItem.Builder()
-        .setMediaId("synthetic-tone")
-        .setUri("memory://synthetic-tone.wav")
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle("틈플레이 샘플")
-                .setArtist("직접 생성한 테스트 톤")
-                .build(),
-        )
-        .build()
 
     private fun createSampleWave(): ByteArray {
         val sampleRate = 44_100
