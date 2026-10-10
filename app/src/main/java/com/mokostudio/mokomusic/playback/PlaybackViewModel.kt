@@ -19,6 +19,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+enum class RepeatMode {
+    OFF,
+    ALL,
+    ONE,
+}
+
 data class PlaybackUiState(
     val connected: Boolean = false,
     val isPlaying: Boolean = false,
@@ -29,6 +35,10 @@ data class PlaybackUiState(
     val currentMediaItemIndex: Int = 0,
     val hasPreviousMediaItem: Boolean = false,
     val hasNextMediaItem: Boolean = false,
+    val shuffleEnabled: Boolean = false,
+    val repeatMode: RepeatMode = RepeatMode.OFF,
+    val canChangeShuffle: Boolean = false,
+    val canChangeRepeatMode: Boolean = false,
     val tracks: List<Track> = emptyList(),
 )
 
@@ -83,6 +93,26 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         controller?.seekToNextMediaItem()
     }
 
+    fun toggleShuffle() {
+        controller?.let { playbackController ->
+            if (!playbackController.isCommandAvailable(Player.COMMAND_SET_SHUFFLE_MODE)) return
+            playbackController.shuffleModeEnabled = !playbackController.shuffleModeEnabled
+            updateState(playbackController)
+        }
+    }
+
+    fun cycleRepeatMode() {
+        controller?.let { playbackController ->
+            if (!playbackController.isCommandAvailable(Player.COMMAND_SET_REPEAT_MODE)) return
+            playbackController.repeatMode = when (playbackController.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                else -> Player.REPEAT_MODE_OFF
+            }
+            updateState(playbackController)
+        }
+    }
+
     fun selectTrack(index: Int) {
         controller?.let { playbackController ->
             playbackController.seekToDefaultPosition(index)
@@ -103,6 +133,14 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     currentMediaItemIndex = player.currentMediaItemIndex,
                     hasPreviousMediaItem = player.hasPreviousMediaItem(),
                     hasNextMediaItem = player.hasNextMediaItem(),
+                    shuffleEnabled = player.shuffleModeEnabled,
+                    repeatMode = when (player.repeatMode) {
+                        Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+                        Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+                        else -> RepeatMode.OFF
+                    },
+                    canChangeShuffle = player.isCommandAvailable(Player.COMMAND_SET_SHUFFLE_MODE),
+                    canChangeRepeatMode = player.isCommandAvailable(Player.COMMAND_SET_REPEAT_MODE),
                     tracks = SampleTrackRepository.tracks,
                 ),
             )

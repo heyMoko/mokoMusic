@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mokostudio.mokomusic.playback.PlaybackUiState
 import com.mokostudio.mokomusic.playback.PlaybackViewModel
+import com.mokostudio.mokomusic.playback.RepeatMode
 import com.mokostudio.mokomusic.ui.theme.MokomusicTheme
 
 class MainActivity : ComponentActivity() {
@@ -46,6 +47,8 @@ class MainActivity : ComponentActivity() {
                     onTogglePlayback = playbackViewModel::togglePlayback,
                     onPreviousTrack = playbackViewModel::skipToPreviousTrack,
                     onNextTrack = playbackViewModel::skipToNextTrack,
+                    onToggleShuffle = playbackViewModel::toggleShuffle,
+                    onCycleRepeatMode = playbackViewModel::cycleRepeatMode,
                     onSeek = playbackViewModel::seekTo,
                     onSelectTrack = playbackViewModel::selectTrack,
                 )
@@ -60,6 +63,8 @@ private fun PlaybackScreen(
     onTogglePlayback: () -> Unit,
     onPreviousTrack: () -> Unit,
     onNextTrack: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeatMode: () -> Unit,
     onSeek: (Long) -> Unit,
     onSelectTrack: (Int) -> Unit,
 ) {
@@ -136,6 +141,28 @@ private fun PlaybackScreen(
                 enabled = uiState.connected && uiState.hasNextMediaItem,
             ) {
                 Text("다음 곡")
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Button(
+                onClick = onToggleShuffle,
+                enabled = uiState.connected && uiState.canChangeShuffle,
+            ) {
+                Text(if (uiState.shuffleEnabled) "셔플 켜짐" else "셔플 꺼짐")
+            }
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+            Button(
+                onClick = onCycleRepeatMode,
+                enabled = uiState.connected && uiState.canChangeRepeatMode,
+            ) {
+                Text(
+                    text = when (uiState.repeatMode) {
+                        RepeatMode.ALL -> "전체 반복"
+                        RepeatMode.ONE -> "한 곡 반복"
+                        RepeatMode.OFF -> "반복 꺼짐"
+                    },
+                )
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
