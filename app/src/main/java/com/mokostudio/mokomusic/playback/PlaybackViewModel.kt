@@ -8,7 +8,9 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.mokostudio.mokomusic.data.LibraryRepository
 import com.mokostudio.mokomusic.data.SampleTrackRepository
+import com.mokostudio.mokomusic.data.SharedPreferencesLibraryRepository
 import com.mokostudio.mokomusic.data.Track
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,12 +41,17 @@ data class PlaybackUiState(
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val canChangeShuffle: Boolean = false,
     val canChangeRepeatMode: Boolean = false,
+    val favoriteTrackIds: Set<String> = emptySet(),
     val tracks: List<Track> = emptyList(),
 )
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
+    private val libraryRepository: LibraryRepository = SharedPreferencesLibraryRepository(application)
     private val _uiState = MutableStateFlow(
-        PlaybackUiState(tracks = SampleTrackRepository.tracks),
+        PlaybackUiState(
+            tracks = SampleTrackRepository.tracks,
+            favoriteTrackIds = libraryRepository.favoriteTrackIds(),
+        ),
     )
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
     private var controller: MediaController? = null
@@ -120,10 +127,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun toggleFavorite(trackId: String) {
+        val favoriteTrackIds = libraryRepository.toggleFavorite(trackId)
+        _uiState.update { it.copy(favoriteTrackIds = favoriteTrackIds) }
+    }
+
     private fun updateState(player: Player) {
         viewModelScope.launch {
-            _uiState.emit(
-                PlaybackUiState(
+            _uiState.update { currentState ->
+                currentState.copy(
                     connected = true,
                     isPlaying = player.isPlaying,
                     title = player.mediaMetadata.title?.toString() ?: "재생 준비 중",
@@ -141,9 +153,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     },
                     canChangeShuffle = player.isCommandAvailable(Player.COMMAND_SET_SHUFFLE_MODE),
                     canChangeRepeatMode = player.isCommandAvailable(Player.COMMAND_SET_REPEAT_MODE),
-                    tracks = SampleTrackRepository.tracks,
-                ),
-            )
+                    favoriteTrackIds = currentState.favoriteTrackIds,
+                )
+            }
         }
         if (player.isPlaying) {
             startProgressUpdates(player)

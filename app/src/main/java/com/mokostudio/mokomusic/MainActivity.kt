@@ -6,8 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -26,6 +27,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mokostudio.mokomusic.playback.PlaybackUiState
@@ -51,6 +55,7 @@ class MainActivity : ComponentActivity() {
                     onCycleRepeatMode = playbackViewModel::cycleRepeatMode,
                     onSeek = playbackViewModel::seekTo,
                     onSelectTrack = playbackViewModel::selectTrack,
+                    onToggleFavorite = playbackViewModel::toggleFavorite,
                 )
             }
         }
@@ -67,6 +72,7 @@ private fun PlaybackScreen(
     onCycleRepeatMode: () -> Unit,
     onSeek: (Long) -> Unit,
     onSelectTrack: (Int) -> Unit,
+    onToggleFavorite: (String) -> Unit,
 ) {
     val duration = uiState.durationMs.toFloat().coerceAtLeast(1f)
     var isSeeking by remember(uiState.currentMediaItemIndex, uiState.durationMs) {
@@ -93,17 +99,31 @@ private fun PlaybackScreen(
                 .weight(1f),
         ) {
             itemsIndexed(uiState.tracks) { index, track ->
-                Button(
-                    onClick = { onSelectTrack(index) },
+                val isFavorite = track.id in uiState.favoriteTrackIds
+                Row(
                     modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = if (index == uiState.currentMediaItemIndex) {
-                            "재생 중 · ${track.title}"
-                        } else {
-                            track.title
+                    Button(
+                        onClick = { onSelectTrack(index) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            text = if (index == uiState.currentMediaItemIndex) {
+                                "재생 중 · ${track.title}"
+                            } else {
+                                track.title
+                            },
+                        )
+                    }
+                    IconButton(
+                        onClick = { onToggleFavorite(track.id) },
+                        modifier = Modifier.semantics {
+                            contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가"
                         },
-                    )
+                    ) {
+                        Text(if (isFavorite) "★" else "☆")
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
