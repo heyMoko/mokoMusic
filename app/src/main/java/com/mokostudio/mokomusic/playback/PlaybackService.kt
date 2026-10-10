@@ -2,6 +2,7 @@ package com.mokostudio.mokomusic.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -68,6 +69,8 @@ class PlaybackService : MediaSessionService() {
             ?: 0
 
         val playbackPlayer = ExoPlayer.Builder(this)
+            .setAudioAttributes(AudioAttributes.DEFAULT, true)
+            .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(
                 ProgressiveMediaSource.Factory { ByteArrayDataSource(createSampleWave()) },
             )
