@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
                     onSeek = playbackViewModel::seekTo,
                     onSelectTrack = playbackViewModel::selectTrack,
                     onToggleFavorite = playbackViewModel::toggleFavorite,
+                    onRetryPlayback = playbackViewModel::retryPlayback,
                 )
             }
         }
@@ -103,6 +104,7 @@ private fun PlaybackScreen(
     onSeek: (Long) -> Unit,
     onSelectTrack: (Int) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    onRetryPlayback: () -> Unit,
 ) {
     val duration = uiState.durationMs.toFloat().coerceAtLeast(1f)
     var isSeeking by remember(uiState.currentMediaItemIndex, uiState.durationMs) {
@@ -235,6 +237,41 @@ private fun PlaybackScreen(
                 },
             ) {
                 Text(if (isFavorite) "♥" else "♡", color = Coral, fontSize = 29.sp)
+            }
+        }
+
+        uiState.playbackError?.let { errorMessage ->
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFF342321),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("재생할 수 없어요", color = Color(0xFFFFA08F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text(errorMessage, color = Cream, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Surface(
+                        onClick = onRetryPlayback,
+                        enabled = uiState.connected,
+                        shape = CircleShape,
+                        color = Coral,
+                        contentColor = Ink,
+                    ) {
+                        Text(
+                            "다시 시도",
+                            modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
             }
         }
 

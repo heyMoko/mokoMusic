@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.ComponentName
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -43,6 +44,7 @@ data class PlaybackUiState(
     val canChangeRepeatMode: Boolean = false,
     val favoriteTrackIds: Set<String> = emptySet(),
     val recentlyPlayedTracks: List<Track> = emptyList(),
+    val playbackError: String? = null,
     val tracks: List<Track> = emptyList(),
 )
 
@@ -60,6 +62,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var progressUpdates: Job? = null
 
     private val playerListener = object : Player.Listener {
+        override fun onPlayerError(error: PlaybackException) {
+            _uiState.update { it.copy(playbackError = playbackErrorMessage(error.errorCode)) }
+        }
+
         override fun onEvents(player: Player, events: Player.Events) {
             updateState(player)
         }
@@ -95,11 +101,27 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun skipToPreviousTrack() {
-        controller?.seekToPreviousMediaItem()
+        controller?.let { playbackController ->
+            val recoveringFromError = _uiState.value.playbackError != null
+            playbackController.seekToPreviousMediaItem()
+            if (recoveringFromError) {
+                playbackController.prepare()
+                playbackController.play()
+                clearPlaybackError()
+            }
+        }
     }
 
     fun skipToNextTrack() {
-        controller?.seekToNextMediaItem()
+        controller?.let { playbackController ->
+            val recoveringFromError = _uiState.value.playbackError != null
+            playbackController.seekToNextMediaItem()
+            if (recoveringFromError) {
+                playbackController.prepare()
+                playbackController.play()
+                clearPlaybackError()
+            }
+        }
     }
 
     fun toggleShuffle() {
@@ -125,6 +147,20 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun selectTrack(index: Int) {
         controller?.let { playbackController ->
             playbackController.seekToDefaultPosition(index)
+            if (playbackController.playbackState == Player.STATE_IDLE ||
+                playbackController.playbackState == Player.STATE_ENDED
+            ) {
+                playbackController.prepare()
+            }
+            playbackController.play()
+            clearPlaybackError()
+        }
+    }
+
+    fun retryPlayback() {
+        controller?.let { playbackController ->
+            clearPlaybackError()
+            playbackController.prepare()
             playbackController.play()
         }
     }
@@ -174,6 +210,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun loadRecentlyPlayedTracks(): List<Track> {
         val tracksById = SampleTrackRepository.tracks.associateBy(Track::id)
         return libraryRepository.recentlyPlayedTrackIds().mapNotNull(tracksById::get)
+    }
+
+    private fun clearPlaybackError() {
+        _uiState.update { it.copy(playbackError = null) }
     }
 
     private fun startProgressUpdates(player: Player) {
