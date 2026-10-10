@@ -11,7 +11,9 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.mokostudio.mokomusic.MainActivity
+import com.mokostudio.mokomusic.data.LibraryRepository
 import com.mokostudio.mokomusic.data.SampleTrackRepository
+import com.mokostudio.mokomusic.data.SharedPreferencesLibraryRepository
 import com.mokostudio.mokomusic.data.toMediaItem
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -29,6 +31,7 @@ import kotlin.math.sin
 class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private lateinit var playbackStateStore: PlaybackStateStore
+    private lateinit var libraryRepository: LibraryRepository
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var savePlaybackStateJob: Job? = null
 
@@ -38,9 +41,26 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    private val recentTrackListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) {
+                mediaSession?.player?.currentMediaItem?.mediaId?.let(
+                    libraryRepository::recordRecentlyPlayed,
+                )
+            }
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (mediaSession?.player?.isPlaying == true) {
+                mediaItem?.mediaId?.let(libraryRepository::recordRecentlyPlayed)
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         playbackStateStore = PlaybackStateStore(this)
+        libraryRepository = SharedPreferencesLibraryRepository(this)
         val savedState = playbackStateStore.load()
         val tracks = SampleTrackRepository.tracks
         val restoredIndex = tracks.indexOfFirst { it.id == savedState.mediaId }
@@ -61,6 +81,7 @@ class PlaybackService : MediaSessionService() {
                     savedState.positionMs,
                 )
                 addListener(playbackStateListener)
+                addListener(recentTrackListener)
                 prepare()
                 playWhenReady = false
             }
@@ -98,6 +119,7 @@ class PlaybackService : MediaSessionService() {
         serviceScope.cancel()
         mediaSession?.run {
             player.removeListener(playbackStateListener)
+            player.removeListener(recentTrackListener)
             player.release()
             release()
         }

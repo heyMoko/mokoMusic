@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mokostudio.mokomusic.playback.PlaybackUiState
@@ -92,6 +93,16 @@ private fun PlaybackScreen(
         Spacer(modifier = Modifier.height(32.dp))
         Text(text = uiState.title, style = MaterialTheme.typography.titleLarge)
         Text(text = uiState.artist, style = MaterialTheme.typography.bodyMedium)
+        if (uiState.recentlyPlayedTracks.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "최근 재생", style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = uiState.recentlyPlayedTracks.take(3).joinToString(" · ") { it.title },
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(modifier = Modifier.height(24.dp))
         LazyColumn(
             modifier = Modifier

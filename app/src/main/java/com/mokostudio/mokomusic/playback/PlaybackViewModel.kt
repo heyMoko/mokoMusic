@@ -42,6 +42,7 @@ data class PlaybackUiState(
     val canChangeShuffle: Boolean = false,
     val canChangeRepeatMode: Boolean = false,
     val favoriteTrackIds: Set<String> = emptySet(),
+    val recentlyPlayedTracks: List<Track> = emptyList(),
     val tracks: List<Track> = emptyList(),
 )
 
@@ -51,6 +52,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         PlaybackUiState(
             tracks = SampleTrackRepository.tracks,
             favoriteTrackIds = libraryRepository.favoriteTrackIds(),
+            recentlyPlayedTracks = loadRecentlyPlayedTracks(),
         ),
     )
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
@@ -133,6 +135,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun updateState(player: Player) {
+        if (player.isPlaying) {
+            player.currentMediaItem?.mediaId?.let(libraryRepository::recordRecentlyPlayed)
+        }
         viewModelScope.launch {
             _uiState.update { currentState ->
                 currentState.copy(
@@ -154,6 +159,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     canChangeShuffle = player.isCommandAvailable(Player.COMMAND_SET_SHUFFLE_MODE),
                     canChangeRepeatMode = player.isCommandAvailable(Player.COMMAND_SET_REPEAT_MODE),
                     favoriteTrackIds = currentState.favoriteTrackIds,
+                    recentlyPlayedTracks = loadRecentlyPlayedTracks(),
                 )
             }
         }
@@ -163,6 +169,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             progressUpdates?.cancel()
             progressUpdates = null
         }
+    }
+
+    private fun loadRecentlyPlayedTracks(): List<Track> {
+        val tracksById = SampleTrackRepository.tracks.associateBy(Track::id)
+        return libraryRepository.recentlyPlayedTrackIds().mapNotNull(tracksById::get)
     }
 
     private fun startProgressUpdates(player: Player) {
