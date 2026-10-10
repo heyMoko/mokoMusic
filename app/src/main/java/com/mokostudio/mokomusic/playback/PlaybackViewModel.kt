@@ -13,6 +13,10 @@ import com.mokostudio.mokomusic.data.Track
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class PlaybackUiState(
@@ -34,6 +38,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     )
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
     private var controller: MediaController? = null
+    private var progressUpdates: Job? = null
 
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
@@ -66,6 +71,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun seekTo(positionMs: Long) {
+        _uiState.update { it.copy(positionMs = positionMs.coerceAtLeast(0L)) }
         controller?.seekTo(positionMs)
     }
 
@@ -101,9 +107,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 ),
             )
         }
+        if (player.isPlaying) {
+            startProgressUpdates(player)
+        } else {
+            progressUpdates?.cancel()
+            progressUpdates = null
+        }
+    }
+
+    private fun startProgressUpdates(player: Player) {
+        if (progressUpdates?.isActive == true) return
+
+        progressUpdates = viewModelScope.launch {
+            while (isActive && player.isPlaying) {
+                _uiState.update {
+                    it.copy(positionMs = player.currentPosition.coerceAtLeast(0L))
+                }
+                delay(250L)
+            }
+            progressUpdates = null
+        }
     }
 
     override fun onCleared() {
+        progressUpdates?.cancel()
+        progressUpdates = null
         controller?.removeListener(playerListener)
         controller?.release()
         controller = null

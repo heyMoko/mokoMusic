@@ -21,6 +21,10 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +64,12 @@ private fun PlaybackScreen(
     onSelectTrack: (Int) -> Unit,
 ) {
     val duration = uiState.durationMs.toFloat().coerceAtLeast(1f)
+    var isSeeking by remember(uiState.currentMediaItemIndex, uiState.durationMs) {
+        mutableStateOf(false)
+    }
+    var seekPositionMs by remember(uiState.currentMediaItemIndex, uiState.durationMs) {
+        mutableFloatStateOf(uiState.positionMs.toFloat())
+    }
 
     Column(
         modifier = Modifier
@@ -95,8 +105,16 @@ private fun PlaybackScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
         Slider(
-            value = uiState.positionMs.toFloat().coerceIn(0f, duration),
-            onValueChange = { onSeek(it.toLong()) },
+            value = (if (isSeeking) seekPositionMs else uiState.positionMs.toFloat())
+                .coerceIn(0f, duration),
+            onValueChange = {
+                seekPositionMs = it
+                isSeeking = true
+            },
+            onValueChangeFinished = {
+                onSeek(seekPositionMs.toLong())
+                isSeeking = false
+            },
             valueRange = 0f..duration,
             enabled = uiState.connected && uiState.durationMs > 0L,
             modifier = Modifier.fillMaxWidth(),
