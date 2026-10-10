@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.datasource.ByteArrayDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
@@ -14,14 +15,37 @@ import com.mokostudio.mokomusic.data.SampleTrackRepository
 import com.mokostudio.mokomusic.data.toMediaItem
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.sin
 
 class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
+    private lateinit var playbackStateStore: PlaybackStateStore
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var savePlaybackStateJob: Job? = null
+
+    private val playbackStateListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            playbackStateStore.save(player)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
+        playbackStateStore = PlaybackStateStore(this)
+        val savedState = playbackStateStore.load()
+        val tracks = SampleTrackRepository.tracks
+        val restoredIndex = tracks.indexOfFirst { it.id == savedState.mediaId }
+            .takeIf { it >= 0 }
+            ?: 0
 
         val playbackPlayer = ExoPlayer.Builder(this)
             .setMediaSourceFactory(
@@ -29,10 +53,23 @@ class PlaybackService : MediaSessionService() {
             )
             .build()
             .apply {
-                setMediaItems(SampleTrackRepository.tracks.map { it.toMediaItem() })
+                repeatMode = savedState.repeatMode
+                shuffleModeEnabled = savedState.shuffleEnabled
+                setMediaItems(
+                    tracks.map { it.toMediaItem() },
+                    restoredIndex,
+                    savedState.positionMs,
+                )
+                addListener(playbackStateListener)
                 prepare()
                 playWhenReady = false
             }
+        savePlaybackStateJob = serviceScope.launch {
+            while (isActive) {
+                delay(5_000L)
+                playbackStateStore.save(playbackPlayer)
+            }
+        }
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -55,7 +92,12 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        mediaSession?.player?.let(playbackStateStore::save)
+        savePlaybackStateJob?.cancel()
+        savePlaybackStateJob = null
+        serviceScope.cancel()
         mediaSession?.run {
+            player.removeListener(playbackStateListener)
             player.release()
             release()
         }
