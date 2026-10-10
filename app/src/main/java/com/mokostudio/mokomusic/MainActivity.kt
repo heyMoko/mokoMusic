@@ -40,6 +40,8 @@ class MainActivity : ComponentActivity() {
                 PlaybackScreen(
                     uiState = uiState,
                     onTogglePlayback = playbackViewModel::togglePlayback,
+                    onPreviousTrack = playbackViewModel::skipToPreviousTrack,
+                    onNextTrack = playbackViewModel::skipToNextTrack,
                     onSeek = playbackViewModel::seekTo,
                     onSelectTrack = playbackViewModel::selectTrack,
                 )
@@ -52,6 +54,8 @@ class MainActivity : ComponentActivity() {
 private fun PlaybackScreen(
     uiState: PlaybackUiState,
     onTogglePlayback: () -> Unit,
+    onPreviousTrack: () -> Unit,
+    onNextTrack: () -> Unit,
     onSeek: (Long) -> Unit,
     onSelectTrack: (Int) -> Unit,
 ) {
@@ -98,8 +102,22 @@ private fun PlaybackScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Button(
+                onClick = onPreviousTrack,
+                enabled = uiState.connected && uiState.hasPreviousMediaItem,
+            ) {
+                Text("이전 곡")
+            }
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
             Button(onClick = onTogglePlayback, enabled = uiState.connected) {
                 Text(if (uiState.isPlaying) "일시정지" else "재생")
+            }
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+            Button(
+                onClick = onNextTrack,
+                enabled = uiState.connected && uiState.hasNextMediaItem,
+            ) {
+                Text("다음 곡")
             }
         }
         Spacer(modifier = Modifier.height(16.dp))

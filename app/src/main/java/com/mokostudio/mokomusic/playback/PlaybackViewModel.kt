@@ -23,6 +23,8 @@ data class PlaybackUiState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val currentMediaItemIndex: Int = 0,
+    val hasPreviousMediaItem: Boolean = false,
+    val hasNextMediaItem: Boolean = false,
     val tracks: List<Track> = emptyList(),
 )
 
@@ -67,6 +69,14 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         controller?.seekTo(positionMs)
     }
 
+    fun skipToPreviousTrack() {
+        controller?.seekToPreviousMediaItem()
+    }
+
+    fun skipToNextTrack() {
+        controller?.seekToNextMediaItem()
+    }
+
     fun selectTrack(index: Int) {
         controller?.let { playbackController ->
             playbackController.seekToDefaultPosition(index)
@@ -85,6 +95,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     positionMs = player.currentPosition.coerceAtLeast(0L),
                     durationMs = player.duration.coerceAtLeast(0L),
                     currentMediaItemIndex = player.currentMediaItemIndex,
+                    hasPreviousMediaItem = player.hasPreviousMediaItem(),
+                    hasNextMediaItem = player.hasNextMediaItem(),
                     tracks = SampleTrackRepository.tracks,
                 ),
             )
