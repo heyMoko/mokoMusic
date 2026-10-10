@@ -3,22 +3,22 @@ package com.mokostudio.mokomusic.data
 object SampleTrackRepository {
     val tracks: List<Track> = listOf(
         Track(
-            id = "synthetic-tone-1",
-            title = "새벽의 점",
-            artist = "mokoMusic 테스트 샘플",
-            uri = "memory://synthetic-tone-1.wav",
+            id = "hyak-ep3-suika",
+            title = "Suika",
+            artist = "hyak",
+            uri = "asset:///audio/suika.mp3",
         ),
         Track(
-            id = "synthetic-tone-2",
-            title = "도시의 잔향",
-            artist = "mokoMusic 테스트 샘플",
-            uri = "memory://synthetic-tone-2.wav",
+            id = "hyak-ep4-blackhole",
+            title = "Black Hole",
+            artist = "hyak",
+            uri = "asset:///audio/blackhole.mp3",
         ),
         Track(
-            id = "synthetic-tone-3",
-            title = "비 오는 창가",
-            artist = "mokoMusic 테스트 샘플",
-            uri = "memory://synthetic-tone-3.wav",
+            id = "hyak-ep6-galaxy",
+            title = "Galaxy Collision",
+            artist = "hyak",
+            uri = "asset:///audio/galaxy.mp3",
         ),
     )
 }
