@@ -344,7 +344,10 @@ private fun PlaybackScreen(
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 uiState.recentlyPlayedTracks.take(3).forEachIndexed { index, track ->
+                    val trackIndex = uiState.tracks.indexOfFirst { it.id == track.id }
                     Surface(
+                        onClick = { if (trackIndex >= 0) onSelectTrack(trackIndex) },
+                        enabled = trackIndex >= 0,
                         modifier = Modifier.weight(1f),
                         color = Panel,
                         shape = RoundedCornerShape(14.dp),
