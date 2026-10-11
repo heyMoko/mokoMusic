@@ -8,6 +8,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.mokostudio.mokomusic.data.LibraryRepository
 import com.mokostudio.mokomusic.data.SampleTrackRepository
@@ -28,8 +29,28 @@ enum class RepeatMode {
     ONE,
 }
 
+enum class ControllerConnectionStatus {
+    CONNECTING,
+    CONNECTED,
+    FAILED,
+}
+
+data class ControllerConnectionUiState(
+    val status: ControllerConnectionStatus = ControllerConnectionStatus.CONNECTING,
+    val errorMessage: String? = null,
+) {
+    fun onConnecting(): ControllerConnectionUiState =
+        copy(status = ControllerConnectionStatus.CONNECTING, errorMessage = null)
+
+    fun onConnected(): ControllerConnectionUiState =
+        copy(status = ControllerConnectionStatus.CONNECTED, errorMessage = null)
+
+    fun onFailed(message: String): ControllerConnectionUiState =
+        copy(status = ControllerConnectionStatus.FAILED, errorMessage = message)
+}
+
 data class PlaybackUiState(
-    val connected: Boolean = false,
+    val controllerConnection: ControllerConnectionUiState = ControllerConnectionUiState(),
     val isPlaying: Boolean = false,
     val title: String = "재생 준비 중",
     val artist: String = "",
@@ -46,10 +67,17 @@ data class PlaybackUiState(
     val recentlyPlayedTracks: List<Track> = emptyList(),
     val playbackError: String? = null,
     val tracks: List<Track> = emptyList(),
-)
+) {
+    val connected: Boolean
+        get() = controllerConnection.status == ControllerConnectionStatus.CONNECTED
+}
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
     private val libraryRepository: LibraryRepository = SharedPreferencesLibraryRepository(application)
+    private val sessionToken = SessionToken(
+        application,
+        ComponentName(application, PlaybackService::class.java),
+    )
     private val _uiState = MutableStateFlow(
         PlaybackUiState(
             tracks = SampleTrackRepository.tracks,
@@ -59,6 +87,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     )
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
     private var controller: MediaController? = null
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var connectionAttempt = 0
     private var progressUpdates: Job? = null
 
     private val playerListener = object : Player.Listener {
@@ -72,16 +102,45 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
-        val sessionToken = SessionToken(
-            application,
-            ComponentName(application, PlaybackService::class.java),
-        )
-        val controllerFuture = MediaController.Builder(application, sessionToken).buildAsync()
-        controllerFuture.addListener(
+        connectToPlaybackService()
+    }
+
+    fun retryControllerConnection() {
+        if (_uiState.value.controllerConnection.status == ControllerConnectionStatus.FAILED) {
+            connectToPlaybackService()
+        }
+    }
+
+    private fun connectToPlaybackService() {
+        val attempt = ++connectionAttempt
+        controllerFuture?.let(MediaController::releaseFuture)
+        controllerFuture = null
+        _uiState.update {
+            it.copy(controllerConnection = it.controllerConnection.onConnecting())
+        }
+
+        val newControllerFuture = MediaController.Builder(getApplication(), sessionToken).buildAsync()
+        controllerFuture = newControllerFuture
+        newControllerFuture.addListener(
             {
-                controller = controllerFuture.get().also { connectedController ->
-                    connectedController.addListener(playerListener)
+                if (attempt != connectionAttempt) return@addListener
+
+                try {
+                    val connectedController = newControllerFuture.get()
+                    controller = connectedController.also { it.addListener(playerListener) }
+                    _uiState.update {
+                        it.copy(controllerConnection = it.controllerConnection.onConnected())
+                    }
                     updateState(connectedController)
+                } catch (exception: Exception) {
+                    if (exception is InterruptedException) Thread.currentThread().interrupt()
+                    if (controllerFuture === newControllerFuture) {
+                        controllerFuture = null
+                        MediaController.releaseFuture(newControllerFuture)
+                    }
+                    _uiState.update {
+                        it.copy(controllerConnection = it.controllerConnection.onFailed(CONNECTION_ERROR_MESSAGE))
+                    }
                 }
             },
             MoreExecutors.directExecutor(),
@@ -177,7 +236,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _uiState.update { currentState ->
                 currentState.copy(
-                    connected = true,
+                    controllerConnection = currentState.controllerConnection.onConnected(),
                     isPlaying = player.isPlaying,
                     title = player.mediaMetadata.title?.toString() ?: "재생 준비 중",
                     artist = player.mediaMetadata.artist?.toString().orEmpty(),
@@ -231,11 +290,17 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     override fun onCleared() {
+        connectionAttempt++
         progressUpdates?.cancel()
         progressUpdates = null
         controller?.removeListener(playerListener)
-        controller?.release()
         controller = null
+        controllerFuture?.let(MediaController::releaseFuture)
+        controllerFuture = null
         super.onCleared()
+    }
+
+    private companion object {
+        const val CONNECTION_ERROR_MESSAGE = "플레이어 서비스에 연결하지 못했어요. 다시 시도해 주세요."
     }
 }

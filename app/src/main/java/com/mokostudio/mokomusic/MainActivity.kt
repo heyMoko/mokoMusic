@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mokostudio.mokomusic.playback.ControllerConnectionStatus
 import com.mokostudio.mokomusic.playback.PlaybackUiState
 import com.mokostudio.mokomusic.playback.PlaybackViewModel
 import com.mokostudio.mokomusic.playback.RepeatMode
@@ -87,6 +88,7 @@ class MainActivity : ComponentActivity() {
                     onSelectTrack = playbackViewModel::selectTrack,
                     onToggleFavorite = playbackViewModel::toggleFavorite,
                     onRetryPlayback = playbackViewModel::retryPlayback,
+                    onRetryControllerConnection = playbackViewModel::retryControllerConnection,
                 )
             }
         }
@@ -105,6 +107,7 @@ private fun PlaybackScreen(
     onSelectTrack: (Int) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onRetryPlayback: () -> Unit,
+    onRetryControllerConnection: () -> Unit,
 ) {
     val duration = uiState.durationMs.toFloat().coerceAtLeast(1f)
     val favoriteTracks = uiState.tracks.withIndex()
@@ -166,6 +169,36 @@ private fun PlaybackScreen(
                         color = if (uiState.connected) Color(0xFFB4E9C6) else Muted,
                         fontSize = 11.sp,
                     )
+                }
+            }
+        }
+
+        uiState.controllerConnection.errorMessage?.let { connectionError ->
+            Spacer(Modifier.height(14.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFF342321),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(connectionError, modifier = Modifier.weight(1f), color = Cream, fontSize = 12.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Surface(
+                        onClick = onRetryControllerConnection,
+                        shape = CircleShape,
+                        color = Coral,
+                        contentColor = Ink,
+                    ) {
+                        Text(
+                            "다시 연결",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }
@@ -451,7 +484,15 @@ private fun PlaybackScreen(
         ) {
             Text("●", color = if (uiState.connected) Color(0xFF8FDAA9) else Muted, fontSize = 8.sp)
             Spacer(Modifier.width(7.dp))
-            Text(if (uiState.connected) "MediaSession 연결됨" else "MediaSession 연결 중", color = Muted, fontSize = 10.sp)
+            Text(
+                when (uiState.controllerConnection.status) {
+                    ControllerConnectionStatus.CONNECTED -> "MediaSession 연결됨"
+                    ControllerConnectionStatus.CONNECTING -> "MediaSession 연결 중"
+                    ControllerConnectionStatus.FAILED -> "MediaSession 연결 실패"
+                },
+                color = Muted,
+                fontSize = 10.sp,
+            )
         }
     }
 }
