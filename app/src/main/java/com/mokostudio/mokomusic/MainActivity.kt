@@ -107,6 +107,8 @@ private fun PlaybackScreen(
     onRetryPlayback: () -> Unit,
 ) {
     val duration = uiState.durationMs.toFloat().coerceAtLeast(1f)
+    val favoriteTracks = uiState.tracks.withIndex()
+        .filter { it.value.id in uiState.favoriteTrackIds }
     var isSeeking by remember(uiState.currentMediaItemIndex, uiState.durationMs) {
         mutableStateOf(false)
     }
@@ -356,6 +358,41 @@ private fun PlaybackScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
+        }
+
+        if (favoriteTracks.isNotEmpty()) {
+            SectionHeading("즐겨찾기", "${favoriteTracks.size}곡")
+            Spacer(Modifier.height(10.dp))
+            favoriteTracks.forEach { (index, track) ->
+                Surface(
+                    onClick = { onSelectTrack(index) },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 7.dp),
+                    color = Panel,
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("♥", color = Coral, fontSize = 19.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                track.title,
+                                color = Cream,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(track.artist, color = Muted, fontSize = 11.sp)
+                        }
+                        Text("재생", color = Coral, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(17.dp))
         }
 
         SectionHeading("재생 대기열", "${uiState.tracks.size}곡")
