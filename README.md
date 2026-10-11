@@ -23,6 +23,7 @@ Android Jetpack Compose와 Media3로 구현한 로컬 음악 플레이어입니�
 | AndroidX Media3 `MediaSessionService`, `MediaSession`, `MediaController` | 서비스와 화면 사이 | 플레이어를 화면 생명주기와 분리해 백그라운드에서 유지하고, 시스템 미디어 제어와 앱 UI가 같은 플레이어를 조작하도록 연결합니다. |
 | SharedPreferences | `PlaybackStateStore`, `SharedPreferencesLibraryRepository` | 재생 위치·모드와 즐겨찾기·최근 곡 ID처럼 규모가 작은 로컬 상태를 별도 서버나 데이터베이스 없이 저장합니다. |
 | JUnit 4 | Playback 관련 단위 테스트 | Media3 오류 코드 안내 문구와 컨트롤러 연결 상태 전이를 빠르게 검증합니다. |
+| AndroidX Test, AndroidJUnitRunner | `SharedPreferencesLibraryRepositoryTest` | 실제 Android SharedPreferences API의 저장·복원 동작을 에뮬레이터에서 검증합니다. 테스트 전용 Context를 사용해 앱 데이터와 분리합니다. |
 
 현재 곡 정보는 APK에 포함된 로컬 음원 세 곡으로 한정됩니다. 별도 백엔드나 스트리밍 API를 두지 않아 시스템 재생 연동에 집중할 수 있고, 샘플 재생에는 네트워크가 필요하지 않습니다. 곡 수가 커지거나 검색·다운로드·동기화가 필요해지면 카탈로그와 저장 계층을 확장해야 합니다.
 
@@ -88,7 +89,10 @@ Android Studio에서 프로젝트를 열거나, Windows PowerShell에서 저장�
 ```powershell
 .\gradlew.bat assembleDebug
 .\gradlew.bat testDebugUnitTest
+.\gradlew.bat connectedDebugAndroidTest
 ```
+
+`connectedDebugAndroidTest`는 실행 중인 에뮬레이터 또는 연결된 Android 기기가 필요합니다.
 
 디버그 APK: `app/build/outputs/apk/debug/app-debug.apk`
 
@@ -97,6 +101,7 @@ Android Studio에서 프로젝트를 열거나, Windows PowerShell에서 저장�
 - 빌드와 단위 테스트 통과
 - 에뮬레이터에서 재생 상태·위치 진행, MediaSession 다음 곡 전환, 백그라운드·화면 꺼짐 재생, 재생 상태 복원 확인
 - 즐겨찾기 저장·복원과 오류 문구 분류 확인
+- 에뮬레이터 instrumentation 테스트에서 즐겨찾기 복원, 최근 재생 중복 제거·최신순 이동, 최대 10곡 제한 확인
 - 컨트롤러 연결 상태 전이 단위 테스트
 - MediaController 정상 연결과 MediaSession 등록을 에뮬레이터에서 확인
 - 연결 Future 실패를 실제로 재현해 UI에서 다시 연결하는 흐름은 검증하지 못했습니다.
