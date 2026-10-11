@@ -77,24 +77,23 @@ LibraryRepository ────── 즐겨찾기·최근 재생 곡 ID
 
 플레이어 이벤트와 주기 저장 작업이 재생 위치·곡 정보를 저장합니다. 즐겨찾기와 최근 재생은 별도 Repository를 통해 관리해 재생 상태와 라이브러리 상태의 책임을 나눴습니다.
 
-## 빌드와 테스트
+## 빌드 및 검증
 
-- Android Gradle Plugin: 9.2.1
-- Kotlin: 2.2.10
-- Android 최소 API: 26
-- Compile SDK: 37 / Target SDK: 36
+| 항목 | 설정 |
+| --- | --- |
+| Android Gradle Plugin | 9.2.1 |
+| Kotlin | 2.2.10 |
+| Android API | 최소 26 · Compile 37 · Target 36 |
 
-Android Studio에서 프로젝트를 열거나, Windows PowerShell에서 저장소 루트에서 실행합니다.
+| 검증 항목 | Gradle 명령 |
+| --- | --- |
+| Debug APK 빌드 | `gradlew.bat assembleDebug` |
+| JVM 단위 테스트 | `gradlew.bat testDebugUnitTest` |
+| Android instrumentation 테스트 | `gradlew.bat connectedDebugAndroidTest` |
 
-```powershell
-.\gradlew.bat assembleDebug
-.\gradlew.bat testDebugUnitTest
-.\gradlew.bat connectedDebugAndroidTest
-```
+Instrumentation 테스트는 실행 중인 에뮬레이터 또는 연결된 Android 기기가 필요합니다.
 
-`connectedDebugAndroidTest`는 실행 중인 에뮬레이터 또는 연결된 Android 기기가 필요합니다.
-
-디버그 APK: `app/build/outputs/apk/debug/app-debug.apk`
+빌드 산출물: `app/build/outputs/apk/debug/app-debug.apk`
 
 ## 검증 범위
 
