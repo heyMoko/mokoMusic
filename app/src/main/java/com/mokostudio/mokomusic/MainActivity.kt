@@ -440,7 +440,7 @@ private fun PlaybackScreen(
             Spacer(Modifier.height(17.dp))
         }
 
-        SectionHeading("재생 대기열", "${uiState.tracks.size}곡")
+        SectionHeading("재생 목록", "${uiState.tracks.size}곡")
         Spacer(Modifier.height(10.dp))
         uiState.tracks.forEachIndexed { index, track ->
             val isCurrent = index == uiState.currentMediaItemIndex
