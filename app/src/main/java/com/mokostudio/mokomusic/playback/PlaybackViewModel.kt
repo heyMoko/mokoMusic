@@ -52,6 +52,7 @@ data class ControllerConnectionUiState(
 data class PlaybackUiState(
     val controllerConnection: ControllerConnectionUiState = ControllerConnectionUiState(),
     val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
     val title: String = "재생 준비 중",
     val artist: String = "",
     val positionMs: Long = 0L,
@@ -238,6 +239,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 currentState.copy(
                     controllerConnection = currentState.controllerConnection.onConnected(),
                     isPlaying = player.isPlaying,
+                    isBuffering = player.playbackState == Player.STATE_BUFFERING,
                     title = player.mediaMetadata.title?.toString() ?: "재생 준비 중",
                     artist = player.mediaMetadata.artist?.toString().orEmpty(),
                     positionMs = player.currentPosition.coerceAtLeast(0L),

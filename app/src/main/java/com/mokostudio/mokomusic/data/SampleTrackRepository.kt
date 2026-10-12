@@ -20,5 +20,11 @@ object SampleTrackRepository {
             artist = "hyak",
             uri = "asset:///audio/galaxy.mp3",
         ),
+        Track(
+            id = "commons-the-entertainer",
+            title = "The Entertainer",
+            artist = "Scott Joplin / I.E.",
+            uri = "https://upload.wikimedia.org/wikipedia/commons/1/1b/The_Entertainer_-_Scott_Joplin.ogg",
+        ),
     )
 }

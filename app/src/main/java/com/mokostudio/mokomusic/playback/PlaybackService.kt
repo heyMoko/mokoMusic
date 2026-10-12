@@ -7,6 +7,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
@@ -63,12 +64,14 @@ class PlaybackService : MediaSessionService() {
         val restoredIndex = tracks.indexOfFirst { it.id == savedState.mediaId }
             .takeIf { it >= 0 }
             ?: 0
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("mokoMusic/1.0 (https://github.com/heyMoko/mokoMusic)")
 
         val playbackPlayer = ExoPlayer.Builder(this)
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
             .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(DefaultDataSource.Factory(this)),
+                DefaultMediaSourceFactory(DefaultDataSource.Factory(this, httpDataSourceFactory)),
             )
             .build()
             .apply {

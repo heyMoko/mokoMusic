@@ -275,6 +275,15 @@ private fun PlaybackScreen(
             }
         }
 
+        if (uiState.isBuffering) {
+            Text(
+                text = "음원 불러오는 중…",
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 8.dp),
+                color = Coral,
+                fontSize = 12.sp,
+            )
+        }
+
         uiState.playbackError?.let { errorMessage ->
             Spacer(Modifier.height(12.dp))
             Surface(

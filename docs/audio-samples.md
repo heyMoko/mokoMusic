@@ -14,4 +14,17 @@
 - 라이선스: [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
 - 변경 사항: 배포 ZIP에서 위 3개 MP3를 추출해 파일명만 앱용으로 바꿨습니다. 오디오 내용은 편집하지 않았습니다.
 
-재생은 `SampleTrackRepository`가 `asset:///audio/...` URI와 실제 곡 메타데이터를 `Track`에 연결하고, `PlaybackService`의 Media3 기본 데이터 소스가 APK의 assets에서 파일을 읽는 방식입니다. 앱 실행 중 네트워크 연결은 필요하지 않습니다.
+로컬 곡은 `SampleTrackRepository`가 `asset:///audio/...` URI와 실제 곡 메타데이터를 `Track`에 연결하고, `PlaybackService`의 Media3 기본 데이터 소스가 APK의 assets에서 파일을 읽습니다. 로컬 곡 재생에는 네트워크 연결이 필요하지 않습니다.
+
+## HTTPS 스트리밍 샘플
+
+아래 샘플은 네트워크 연결이 필요합니다.
+
+- 제목: The Entertainer
+- 작곡: Scott Joplin; 연주: I.E. (2007년 녹음)
+- 파일 형식: Ogg Vorbis, 약 3분 54초
+- 파일 페이지: [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:The_Entertainer_-_Scott_Joplin.ogg)
+- 직접 재생 주소: `https://upload.wikimedia.org/wikipedia/commons/1/1b/The_Entertainer_-_Scott_Joplin.ogg`
+- 권리 표시: 파일 페이지는 연주 녹음을 Public Domain Mark 1.0으로 표시하며, 관련 권리를 포함해 알려진 저작권 제한이 없다고 설명합니다. 곡은 Scott Joplin의 퍼블릭 도메인 작품입니다.
+
+이 샘플만 네트워크 연결이 필요합니다. 파일은 Wikimedia Commons에서 직접 스트리밍하며 프로젝트에 복제하거나 편집하지 않았습니다.

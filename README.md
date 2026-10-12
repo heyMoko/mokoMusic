@@ -10,7 +10,7 @@ Android Jetpack Compose와 Media3로 구현한 로컬 음악 플레이어입니�
 - MediaController 연결 실패 안내와 재연결
 - 즐겨찾기와 최근 재생 기록 저장
 - 재생 오류 안내와 다시 시도
-- APK에 포함한 CC0 음원 3곡의 오프라인 재생
+- APK에 포함한 CC0 음원 3곡의 오프라인 재생과 공개 라이선스 HTTPS 샘플 스트리밍 1곡
 
 ## 기술 스택과 선택 이유
 
@@ -19,13 +19,13 @@ Android Jetpack Compose와 Media3로 구현한 로컬 음악 플레이어입니�
 | Kotlin | 앱 전체 | Android와 Media3 API를 직접 사용하면서 nullable 타입과 코루틴 등 Kotlin 언어 기능으로 상태·비동기 처리를 표현합니다. |
 | Jetpack Compose, Material 3 | `MainActivity` 플레이어 화면 | 재생 상태를 화면에 선언적으로 반영하고, 버튼·슬라이더·곡 목록을 작은 UI 요소로 구성합니다. |
 | AndroidX Lifecycle `ViewModel`, Kotlin Coroutines `StateFlow` | `PlaybackViewModel` | 화면 상태를 Activity보다 오래 유지되는 ViewModel에 모으고, Compose가 생명주기에 맞춰 상태를 관찰하도록 합니다. |
-| AndroidX Media3 ExoPlayer | `PlaybackService` | 곡 재생, 탐색, 대기열, 셔플·반복을 처리하는 실제 플레이어입니다. Media3의 기본 데이터 소스로 APK assets의 음원을 읽습니다. |
+| AndroidX Media3 ExoPlayer | `PlaybackService` | 곡 재생, 탐색, 대기열, 셔플·반복을 처리하는 실제 플레이어입니다. 기본 데이터 소스로 APK assets와 HTTPS 음원을 읽습니다. |
 | AndroidX Media3 `MediaSessionService`, `MediaSession`, `MediaController` | 서비스와 화면 사이 | 플레이어를 화면 생명주기와 분리해 백그라운드에서 유지하고, 시스템 미디어 제어와 앱 UI가 같은 플레이어를 조작하도록 연결합니다. |
 | SharedPreferences | `PlaybackStateStore`, `SharedPreferencesLibraryRepository` | 재생 위치·모드와 즐겨찾기·최근 곡 ID처럼 규모가 작은 로컬 상태를 별도 서버나 데이터베이스 없이 저장합니다. |
 | JUnit 4 | Playback 관련 단위 테스트 | Media3 오류 코드 안내 문구와 컨트롤러 연결 상태 전이를 빠르게 검증합니다. |
-| AndroidX Test, AndroidJUnitRunner | `SharedPreferencesLibraryRepositoryTest` | 실제 Android SharedPreferences API의 저장·복원 동작을 에뮬레이터에서 검증합니다. 테스트 전용 Context를 사용해 앱 데이터와 분리합니다. |
+| AndroidX Test, AndroidJUnitRunner | 재생 상태·라이브러리 저장소 테스트 | 실제 Android SharedPreferences API의 저장·복원과 재생 상태 변환을 에뮬레이터에서 검증합니다. 테스트 전용 Context를 사용해 앱 데이터와 분리합니다. |
 
-현재 곡 정보는 APK에 포함된 로컬 음원 세 곡으로 한정됩니다. 별도 백엔드나 스트리밍 API를 두지 않아 시스템 재생 연동에 집중할 수 있고, 샘플 재생에는 네트워크가 필요하지 않습니다. 곡 수가 커지거나 검색·다운로드·동기화가 필요해지면 카탈로그와 저장 계층을 확장해야 합니다.
+곡 목록은 APK에 포함된 로컬 음원 세 곡과 공개 라이선스 HTTPS 스트리밍 샘플 한 곡으로 구성됩니다. 별도 백엔드는 없으며, 로컬 곡은 오프라인에서 재생되고 스트리밍 샘플은 네트워크 연결이 필요합니다.
 
 ## 구조
 
@@ -50,7 +50,7 @@ Android Jetpack Compose와 Media3로 구현한 로컬 음악 플레이어입니�
                               ▼
                     APK assets의 MP3 파일
 
-SampleTrackRepository ── 곡 ID·제목·아티스트·asset URI
+SampleTrackRepository ── 곡 ID·제목·아티스트·asset/HTTPS URI
 PlaybackStateStore ───── 재생 곡·위치·셔플·반복 설정
 LibraryRepository ────── 즐겨찾기·최근 재생 곡 ID
 ```
@@ -61,7 +61,7 @@ LibraryRepository ────── 즐겨찾기·최근 재생 곡 ID
 - `PlaybackViewModel`: `MediaController`로 재생 명령을 전달하고 플레이어 이벤트를 `StateFlow<PlaybackUiState>`로 변환합니다. 연결 Future의 성공·실패를 상태에 반영하고 실패 시 재시도를 시작합니다. 화면이 플레이어 구현을 직접 소유하지 않습니다.
 - `ControllerConnectionUiState`: 연결 중·연결됨·실패 상태와 오류 문구를 표현합니다. 재시도가 시작되거나 연결에 성공하면 이전 오류 상태를 지웁니다.
 - `PlaybackService`: `ExoPlayer`와 `MediaSession`의 수명 주기를 관리합니다. 플레이어가 UI가 보이지 않을 때도 재생할 수 있게 하고 시스템과 외부 컨트롤러에 세션을 제공합니다.
-- `SampleTrackRepository`, `Track`: 재생 목록의 곡 메타데이터와 `asset:///audio/...` URI를 정의하고 Media3 `MediaItem`으로 변환합니다.
+- `SampleTrackRepository`, `Track`: 재생 목록의 곡 메타데이터와 `asset:///audio/...` 또는 HTTPS URI를 정의하고 Media3 `MediaItem`으로 변환합니다.
 - `PlaybackStateStore`: 현재 곡 ID, 재생 위치, 셔플·반복을 저장하고 서비스 시작 시 복원합니다. 복원 후 자동 재생하지 않고 준비된 일시정지 상태를 유지합니다.
 - `LibraryRepository`: 즐겨찾기와 최근 재생 ID를 로컬에 저장합니다. 현재 구현은 SharedPreferences를 사용합니다.
 - `PlaybackErrorMessage`: Media3 오류 코드를 안내 문구로 바꾸며, 매핑 규칙은 단위 테스트에서 확인합니다.
@@ -71,7 +71,7 @@ LibraryRepository ────── 즐겨찾기·최근 재생 곡 ID
 1. 사용자가 화면에서 곡을 선택하거나 재생 버튼을 누릅니다.
 2. `PlaybackScreen`이 이벤트를 `PlaybackViewModel`에 전달합니다.
 3. ViewModel은 `MediaController`를 통해 `PlaybackService`의 `MediaSession`에 명령을 보냅니다.
-4. 서비스가 소유한 ExoPlayer가 대기열을 조작하고 APK assets에서 음원을 재생합니다.
+4. 서비스가 소유한 ExoPlayer가 대기열을 조작하고 APK assets 또는 HTTPS에서 음원을 재생합니다. 스트리밍 샘플은 네트워크 연결이 필요합니다.
 5. 플레이어 이벤트를 ViewModel이 `PlaybackUiState`로 변환합니다. Compose 화면은 생명주기에 맞춰 상태를 수집해 제목, 진행 위치, 버튼 상태를 갱신합니다.
 6. MediaSession은 같은 재생 상태와 제어 명령을 Android 미디어 알림 및 호환되는 시스템 컨트롤에 제공합니다.
 
@@ -99,7 +99,10 @@ Instrumentation 테스트는 실행 중인 에뮬레이터 또는 연결된 Andr
 
 - 빌드와 단위 테스트 통과
 - 에뮬레이터에서 재생 상태·위치 진행, MediaSession 다음 곡 전환, 백그라운드·화면 꺼짐 재생, 재생 상태 복원 확인
+- 에뮬레이터에서 HTTPS 스트리밍 재생과 네트워크 오류 안내·연결 복구 후 재시도 확인
+- 앱 강제 종료 후 다시 실행해 곡·위치·셔플·반복 복원 확인
 - 즐겨찾기 저장·복원과 오류 문구 분류 확인
+- 재생 상태 저장소 및 ExoPlayer 상태 변환 instrumentation 테스트 통과
 - 에뮬레이터 instrumentation 테스트에서 즐겨찾기 복원, 최근 재생 중복 제거·최신순 이동, 최대 10곡 제한 확인
 - 컨트롤러 연결 상태 전이 단위 테스트
 - MediaController 정상 연결과 MediaSession 등록을 에뮬레이터에서 확인

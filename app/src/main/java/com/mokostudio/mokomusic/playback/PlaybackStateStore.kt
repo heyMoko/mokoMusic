@@ -32,11 +32,23 @@ internal class PlaybackStateStore(context: Context) {
             player.currentPosition.coerceAtLeast(0L)
         }
 
+        save(
+            SavedPlaybackState(
+                mediaId = mediaId,
+                positionMs = positionMs,
+                shuffleEnabled = player.shuffleModeEnabled,
+                repeatMode = player.repeatMode,
+            ),
+        )
+    }
+
+    internal fun save(state: SavedPlaybackState) {
+        val mediaId = state.mediaId ?: return
         preferences.edit()
             .putString(KEY_MEDIA_ID, mediaId)
-            .putLong(KEY_POSITION_MS, positionMs)
-            .putBoolean(KEY_SHUFFLE_ENABLED, player.shuffleModeEnabled)
-            .putInt(KEY_REPEAT_MODE, player.repeatMode)
+            .putLong(KEY_POSITION_MS, state.positionMs.coerceAtLeast(0L))
+            .putBoolean(KEY_SHUFFLE_ENABLED, state.shuffleEnabled)
+            .putInt(KEY_REPEAT_MODE, state.repeatMode)
             .apply()
     }
 
